@@ -8,7 +8,7 @@ use nalgebra::{DMatrix, DVector};
 
 pub struct ExtendedKalmanFilter<K: KinematicsModel> {
     state: DVector<f64>,
-    p: DMatrix<f64>,
+    pub p: DMatrix<f64>,
     q: DMatrix<f64>,
     r: DMatrix<f64>,
     kinematics_model: K,

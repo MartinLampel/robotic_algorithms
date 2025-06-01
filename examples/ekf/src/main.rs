@@ -39,6 +39,8 @@ struct SimData {
     dr: Vec<[f64; 2]>,
     ekf: Vec<[f64; 2]>,
     gps: Vec<[f64; 2]>,
+    covariances: Vec<[[f64; 2]; 2]>,
+    show_covariances: bool,
     dr_rmse: f32,
     ekf_rmse: f32,
     step: usize,
@@ -47,6 +49,7 @@ struct SimData {
     dr_full: Vec<[f64; 2]>,
     ekf_full: Vec<[f64; 2]>,
     gps_full: Vec<[f64; 2]>,
+    covariances_full: Vec<[[f64; 2]; 2]>,
     play_mode: bool,
     last_update: Option<std::time::Instant>,
 }
@@ -101,10 +104,12 @@ impl SimData {
         let mut dr_full = Vec::new();
         let mut ekf_full = Vec::new();
         let mut gps_full = Vec::new();
+        let mut covariances_full = Vec::new();
         let mut gt_traj = Vec::new();
         let mut dr_traj = Vec::new();
         let mut ekf_traj = Vec::new();
         let mut gps_traj = Vec::new();
+        let mut covariances = Vec::new();
         for _ in 0..steps {
             let control = ControlData {
                 velocity: v,
@@ -132,12 +137,19 @@ impl SimData {
             gps_full.push([gps_meas.0 as f64, gps_meas.1 as f64]);
             let ekf_state = ekf.localize(&gt, &[gps_measurement], &noisy_control, dt);
             ekf_full.push([ekf_state.position.x as f64, ekf_state.position.y as f64]);
+            // Save 2x2 position covariance
+            let p = ekf.p.clone();
+            covariances_full.push([
+                [p[(0, 0)], p[(0, 1)]],
+                [p[(1, 0)], p[(1, 1)]],
+            ]);
         }
         // Start with only the first point visible
         gt_traj.push(gt_full[0]);
         dr_traj.push(dr_full[0]);
         ekf_traj.push(ekf_full[0]);
         gps_traj.push(gps_full[0]);
+        covariances.push(covariances_full[0]);
         let dr_rmse = 0.0;
         let ekf_rmse = 0.0;
         Self {
@@ -145,6 +157,8 @@ impl SimData {
             dr: dr_traj,
             ekf: ekf_traj,
             gps: gps_traj,
+            covariances,
+            show_covariances: true,
             dr_rmse,
             ekf_rmse,
             step: 1,
@@ -153,6 +167,7 @@ impl SimData {
             dr_full,
             ekf_full,
             gps_full,
+            covariances_full,
             play_mode: false,
             last_update: None,
         }
@@ -208,6 +223,7 @@ impl eframe::App for SimData {
                         self.dr.push(self.dr_full[self.step]);
                         self.ekf.push(self.ekf_full[self.step]);
                         self.gps.push(self.gps_full[self.step]);
+                        self.covariances.push(self.covariances_full[self.step]);
                         self.step += 1;
                         // Update RMSE
                         let rmse = |traj: &[[f64; 2]]| {
@@ -230,6 +246,33 @@ impl eframe::App for SimData {
             ui.label(format!("Step: {}/{}", self.step, self.steps));
             ui.label(format!("Dead Reckoning RMSE: {:.3}", self.dr_rmse));
             ui.label(format!("EKF RMSE: {:.3}", self.ekf_rmse));
+            ui.checkbox(&mut self.show_covariances, "Show covariance ellipses");
+            fn covariance_ellipse_points(
+                mean: [f64; 2],
+                cov: [[f64; 2]; 2],
+                n_points: usize,
+                scale: f64,
+            ) -> Vec<[f64; 2]> {
+                use nalgebra::Matrix2;
+                let cov = Matrix2::new(cov[0][0], cov[0][1], cov[1][0], cov[1][1]);
+                let eig = cov.symmetric_eigen();
+                let angle = eig.eigenvectors[(1, 0)].atan2(eig.eigenvectors[(0, 0)]);
+                let (mx, my) = (mean[0], mean[1]);
+                let (a, b) = (
+                    eig.eigenvalues[0].sqrt() * scale,
+                    eig.eigenvalues[1].sqrt() * scale,
+                );
+                (0..=n_points)
+                    .map(|i| {
+                        let theta = i as f64 * std::f64::consts::TAU / n_points as f64;
+                        let x = a * theta.cos();
+                        let y = b * theta.sin();
+                        let xr = x * angle.cos() - y * angle.sin();
+                        let yr = x * angle.sin() + y * angle.cos();
+                        [mx + xr, my + yr]
+                    })
+                    .collect()
+            }
             Plot::new("Trajectories").show(ui, |plot_ui| {
                 plot_ui.line(
                     Line::new("Ground Truth", PlotPoints::from(self.gt.clone()))
@@ -249,6 +292,13 @@ impl eframe::App for SimData {
                         .color(egui::Color32::YELLOW)
                         .radius(2.5),
                 );
+                // Plot covariance ellipses for each EKF step so far
+                if self.show_covariances {
+                    for (i, (mean, cov)) in self.ekf.iter().zip(self.covariances.iter()).enumerate() {
+                        let ellipse = covariance_ellipse_points([mean[0], mean[1]], *cov, 32, 1.0);
+                        plot_ui.line(Line::new(format!("Covariance {i}"), PlotPoints::from(ellipse)).color(egui::Color32::from_rgb(255, 140, 0)));
+                    }
+                }
             });
         });
     }
