@@ -3,7 +3,11 @@ name = "robotic_algorithms"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = ["examples/ekf"]
+
 [dependencies]
 eframe = "0.31.1"
 egui = "0.31.1"
 egui_plot = "0.32.1"
+nalgebra = "0.33.2"
