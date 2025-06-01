@@ -1,6 +1,6 @@
+use nalgebra::DVector;
 
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -21,10 +21,10 @@ impl Position {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Velocity {
     pub linear: f32,
-    pub angular: f32
+    pub angular: f32,
 }
 
 impl Velocity {
@@ -40,6 +40,53 @@ pub struct RobotState {
     pub velocity: Velocity,
 }
 
+impl From<RobotState> for DVector<f64> {
+    fn from(state: RobotState) -> Self {
+        DVector::from_row_slice(&[
+            state.position.x as f64,
+            state.position.y as f64,
+            state.orientation as f64,
+            state.velocity.linear as f64,
+            state.velocity.angular as f64,
+        ])
+    }
+}
+
+impl From<&RobotState> for DVector<f64> {
+    fn from(state: &RobotState) -> Self {
+        DVector::from_row_slice(&[
+            state.position.x as f64,
+            state.position.y as f64,
+            state.orientation as f64,
+            state.velocity.linear as f64,
+            state.velocity.angular as f64,
+        ])
+    }
+}
+
+
+
+impl From<&DVector<f64>> for RobotState {
+    fn from(vec: &DVector<f64>) -> Self {
+        RobotState {
+            position: Position::new(vec[0] as f32, vec[1] as f32),
+            orientation: vec[2] as f32,
+            velocity: Velocity::new(vec[3] as f32, vec[4] as f32),
+        }
+    }
+}
+
+
+impl From<DVector<f64>> for RobotState {
+    fn from(vec: DVector<f64>) -> Self {
+        RobotState {
+            position: Position::new(vec[0] as f32, vec[1] as f32),
+            orientation: vec[2] as f32,
+            velocity: Velocity::new(vec[3] as f32, vec[4] as f32),
+        }
+    }
+}
+
 
 impl Default for RobotState {
     fn default() -> Self {
@@ -50,8 +97,6 @@ impl Default for RobotState {
         }
     }
 }
-
-
 
 #[derive(Clone)]
 pub struct Odometry {
