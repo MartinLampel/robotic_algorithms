@@ -1,7 +1,7 @@
-
-
-use crate::robot::state::RobotState;
 use crate::robot::control::ControlData;
+use crate::robot::state::RobotState;
+
+use super::state::Position;
 
 pub trait KinematicsModel {
     fn predict_state(
@@ -12,10 +12,9 @@ pub trait KinematicsModel {
     ) -> RobotState;
 }
 
+pub struct UnicyleModel;
 
-pub struct DifferentialDrive;
-
-impl KinematicsModel for DifferentialDrive {
+impl KinematicsModel for UnicycleModel {
     fn predict_state(
         &self,
         current_state: &RobotState,
@@ -29,10 +28,15 @@ impl KinematicsModel for DifferentialDrive {
         let delta_y = v * dt * current_state.orientation.sin();
         let delta_theta = omega * dt;
 
-        let mut new_state = current_state.clone();
-        new_state.position.translate(delta_x, delta_y);
-        new_state.orientation += delta_theta;
+        let cur = Position {
+            x: current_state.position.x + delta_x,
+            y: current_state.position.y + delta_y,
+        };
 
-        new_state
+        RobotState {
+            position: cur,
+            orientation: current_state.orientation + delta_theta,
+            ..*current_state
+        }
     }
 }
