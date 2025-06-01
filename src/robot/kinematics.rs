@@ -12,7 +12,7 @@ pub trait KinematicsModel {
     ) -> RobotState;
 }
 
-pub struct UnicyleModel;
+pub struct UnicycleModel;
 
 impl KinematicsModel for UnicycleModel {
     fn predict_state(
