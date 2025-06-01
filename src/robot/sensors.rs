@@ -1,15 +1,4 @@
 /// A simple GPS sensor that returns the robot's current position as a measurement.
-pub struct GPSSensor;
-
-impl Sensor for GPSSensor {
-    fn measure(&self, state: &crate::robot::state::RobotState, _environment: &crate::environment::Environment) -> super::sensors::SensorMeasurement {
-        // Output the robot's (x, y) position as a GPS measurement with no accuracy info
-        super::sensors::SensorMeasurement::GPS {
-            x: state.position.x,
-            y: state.position.y,
-        }
-    }
-}
 use crate::environment::Environment;
 use crate::robot::state::RobotState;
 use nalgebra::DVector;
@@ -44,6 +33,19 @@ impl TryFrom<&SensorMeasurement> for DVector<f64> {
                 Ok(DVector::from_vec(vec![*x as f64, *y as f64]))
             }
             _ => Err("Unsupported measurement type"),
+        }
+    }
+}
+
+
+pub struct GPSSensor;
+
+impl Sensor for GPSSensor {
+    fn measure(&self, state: &crate::robot::state::RobotState, _environment: &crate::environment::Environment) -> super::sensors::SensorMeasurement {
+        // Output the robot's (x, y) position as a GPS measurement with no accuracy info
+        SensorMeasurement::GPS {
+            x: state.position.x,
+            y: state.position.y,
         }
     }
 }
