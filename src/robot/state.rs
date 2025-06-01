@@ -64,8 +64,6 @@ impl From<&RobotState> for DVector<f64> {
     }
 }
 
-
-
 impl From<&DVector<f64>> for RobotState {
     fn from(vec: &DVector<f64>) -> Self {
         RobotState {
@@ -76,7 +74,6 @@ impl From<&DVector<f64>> for RobotState {
     }
 }
 
-
 impl From<DVector<f64>> for RobotState {
     fn from(vec: DVector<f64>) -> Self {
         RobotState {
@@ -86,7 +83,6 @@ impl From<DVector<f64>> for RobotState {
         }
     }
 }
-
 
 impl Default for RobotState {
     fn default() -> Self {

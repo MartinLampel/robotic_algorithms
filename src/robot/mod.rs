@@ -76,7 +76,7 @@ where
                     self.local_planner
                         .plan_path(&state.position, waypoint, environment);
                 self.run_motion_control(self.dt, state, &target_velocity);
-            //    self.localize(environment, self.dt);
+                //    self.localize(environment, self.dt);
                 robot_states.push(state.clone());
             }
         }

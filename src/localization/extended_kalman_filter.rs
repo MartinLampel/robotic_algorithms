@@ -43,7 +43,7 @@ where
     K: KinematicsModel,
 {
     fn predict(&mut self, u: &ControlData, dt: f32) {
-        let rs = RobotState::from(&self.state);        
+        let rs = RobotState::from(&self.state);
         let u_vec: DVector<f64> = u.into();
 
         let f_jacobian = (self.f_jacobi)(&self.state, &u_vec);
@@ -90,4 +90,3 @@ where
         RobotState::from(updated_state_vec)
     }
 }
-

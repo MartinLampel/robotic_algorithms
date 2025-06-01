@@ -10,7 +10,10 @@ pub struct DeadReckoning<K: crate::robot::kinematics::KinematicsModel> {
 
 impl<K: crate::robot::kinematics::KinematicsModel> DeadReckoning<K> {
     pub fn new(initial_state: RobotState, kinematics_model: K) -> Self {
-        Self { state: initial_state, kinematics_model }
+        Self {
+            state: initial_state,
+            kinematics_model,
+        }
     }
 }
 

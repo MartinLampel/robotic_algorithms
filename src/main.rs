@@ -51,7 +51,10 @@ fn covariance_ellipse_points(
     let eig = cov.symmetric_eigen();
     let angle = eig.eigenvectors[(1, 0)].atan2(eig.eigenvectors[(0, 0)]);
     let (mx, my) = (mean[0], mean[1]);
-    let (a, b) = (eig.eigenvalues[0].sqrt() * scale, eig.eigenvalues[1].sqrt() * scale);
+    let (a, b) = (
+        eig.eigenvalues[0].sqrt() * scale,
+        eig.eigenvalues[1].sqrt() * scale,
+    );
 
     (0..=n_points)
         .map(|i| {
@@ -87,11 +90,11 @@ impl eframe::App for MyApp {
                         "3rd Curve",
                         PlotPoints::from(self.graph3.clone()),
                     ));
-                  //  let points = Points::new("test", &self.graph)
-                  //      .name("1st Curve")
+                    //  let points = Points::new("test", &self.graph)
+                    //      .name("1st Curve")
                     //    .color(egui::Color32::from_rgb(255, 0, 0));
-                   // plot_ui.points(points);
-                   // plot_ui.line(Line::new(
+                    // plot_ui.points(points);
+                    // plot_ui.line(Line::new(
                     //    "2nd Curve",
                     //    PlotPoints::from(self.graph2.clone()),
                     //));

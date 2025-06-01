@@ -12,8 +12,8 @@ pub enum SensorMeasurement {
     },
     Data(Vec<SensorMeasurement>),
     GPS {
-        x: f32,        
-        y: f32,       
+        x: f32,
+        y: f32,
     },
 }
 
@@ -37,11 +37,14 @@ impl TryFrom<&SensorMeasurement> for DVector<f64> {
     }
 }
 
-
 pub struct GPSSensor;
 
 impl Sensor for GPSSensor {
-    fn measure(&self, state: &crate::robot::state::RobotState, _environment: &crate::environment::Environment) -> super::sensors::SensorMeasurement {
+    fn measure(
+        &self,
+        state: &crate::robot::state::RobotState,
+        _environment: &crate::environment::Environment,
+    ) -> super::sensors::SensorMeasurement {
         // Output the robot's (x, y) position as a GPS measurement with no accuracy info
         SensorMeasurement::GPS {
             x: state.position.x,

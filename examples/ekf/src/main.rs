@@ -1,14 +1,14 @@
-use rand_distr::{Normal, Distribution};
 use eframe::egui;
-use egui_plot::{Plot, PlotPoints, Line};
-use robotic_algorithms::robot::state::{RobotState, Position, Velocity};
-use robotic_algorithms::robot::control::ControlData;
-use robotic_algorithms::robot::kinematics::{KinematicsModel, UnicycleModel};
+use egui_plot::{Line, Plot, PlotPoints};
+use nalgebra::{DMatrix, DVector};
+use rand_distr::{Distribution, Normal};
+use robotic_algorithms::localization::LocalizationAlgorithm;
 use robotic_algorithms::localization::dead_reckoning::DeadReckoning;
 use robotic_algorithms::localization::extended_kalman_filter::ExtendedKalmanFilter;
-use robotic_algorithms::localization::LocalizationAlgorithm;
+use robotic_algorithms::robot::control::ControlData;
+use robotic_algorithms::robot::kinematics::{KinematicsModel, UnicycleModel};
 use robotic_algorithms::robot::sensors::{GPSSensor, Sensor, SensorMeasurement};
-use nalgebra::{DMatrix, DVector};
+use robotic_algorithms::robot::state::{Position, RobotState, Velocity};
 
 fn f_jacobi(state: &DVector<f64>, u: &DVector<f64>) -> DMatrix<f64> {
     // Unicycle model Jacobian wrt state
@@ -61,7 +61,10 @@ impl SimData {
         let mut gt = RobotState {
             position: Position { x: 0.0, y: 0.0 },
             orientation: 0.0,
-            velocity: Velocity { linear: v, angular: omega },
+            velocity: Velocity {
+                linear: v,
+                angular: omega,
+            },
         };
         let mut dr = gt.clone();
         let mut dead_reckoning = DeadReckoning::new(dr.clone(), UnicycleModel);
@@ -93,7 +96,7 @@ impl SimData {
         let gps_noise = Normal::new(0.0, 0.1).unwrap();
         // Control noise: stddev 1.0 for velocity, 30 deg (in radians) for angular velocity
         let control_noise_v = Normal::new(0.0, 0.05).unwrap();
-        let control_noise_w = Normal::new(0.0, 2.0 / 180.0 * std::f64::consts::PI ).unwrap();
+        let control_noise_w = Normal::new(0.0, 2.0 / 180.0 * std::f64::consts::PI).unwrap();
         let mut gt_full = Vec::new();
         let mut dr_full = Vec::new();
         let mut ekf_full = Vec::new();
@@ -103,7 +106,10 @@ impl SimData {
         let mut ekf_traj = Vec::new();
         let mut gps_traj = Vec::new();
         for _ in 0..steps {
-            let control = ControlData { velocity: v, angular_velocity: omega };
+            let control = ControlData {
+                velocity: v,
+                angular_velocity: omega,
+            };
             gt = UnicycleModel.predict_state(&gt, &control, dt);
             gt_full.push([gt.position.x as f64, gt.position.y as f64]);
             let mut noisy_control = control.clone();
@@ -112,13 +118,17 @@ impl SimData {
             let dr_est = dead_reckoning.localize(&dr, &[], &noisy_control, dt);
             dr = dr_est.clone();
             dr_full.push([dr.position.x as f64, dr.position.y as f64]);
-            let mut gps_meas = match gps.measure(&gt, &robotic_algorithms::environment::Environment) {
+            let mut gps_meas = match gps.measure(&gt, &robotic_algorithms::environment::Environment)
+            {
                 SensorMeasurement::GPS { x, y } => (x, y),
                 _ => panic!("Expected GPS measurement"),
             };
             gps_meas.0 += gps_noise.sample(&mut rng) as f32;
             gps_meas.1 += gps_noise.sample(&mut rng) as f32;
-            let gps_measurement = SensorMeasurement::GPS { x: gps_meas.0, y: gps_meas.1 };
+            let gps_measurement = SensorMeasurement::GPS {
+                x: gps_meas.0,
+                y: gps_meas.1,
+            };
             gps_full.push([gps_meas.0 as f64, gps_meas.1 as f64]);
             let ekf_state = ekf.localize(&gt, &[gps_measurement], &noisy_control, dt);
             ekf_full.push([ekf_state.position.x as f64, ekf_state.position.y as f64]);
@@ -157,8 +167,10 @@ impl eframe::App for SimData {
             ui.label("Use the button to step through the simulation.");
 
             let next_step_clicked = ui.button("Next step").clicked();
-            let play_clicked = ui.button(if self.play_mode { "Pause" } else { "Play" })
-                .on_hover_text("Animate the simulation").clicked();
+            let play_clicked = ui
+                .button(if self.play_mode { "Pause" } else { "Play" })
+                .on_hover_text("Animate the simulation")
+                .clicked();
 
             // Handle play/pause toggle
             if play_clicked {
@@ -179,7 +191,9 @@ impl eframe::App for SimData {
                 // Animate at ~60Hz, but only step if enough time has passed
                 let now = std::time::Instant::now();
                 let interval = std::time::Duration::from_millis(16); // ~60 FPS
-                let enough_time = self.last_update.map_or(true, |last| now.duration_since(last) >= interval);
+                let enough_time = self
+                    .last_update
+                    .map_or(true, |last| now.duration_since(last) >= interval);
                 if enough_time {
                     do_step = true;
                     steps_per_frame = 1;
@@ -196,7 +210,7 @@ impl eframe::App for SimData {
                         self.gps.push(self.gps_full[self.step]);
                         self.step += 1;
                         // Update RMSE
-                        let rmse = |traj: &Vec<[f64; 2]>| {
+                        let rmse = |traj: &[[f64; 2]]| {
                             let mut sum = 0.0;
                             for (i, [x, y]) in traj.iter().enumerate() {
                                 let [gtx, gty] = self.gt_full[i];
@@ -217,15 +231,23 @@ impl eframe::App for SimData {
             ui.label(format!("Dead Reckoning RMSE: {:.3}", self.dr_rmse));
             ui.label(format!("EKF RMSE: {:.3}", self.ekf_rmse));
             Plot::new("Trajectories").show(ui, |plot_ui| {
-                plot_ui.line(Line::new("Ground Truth", PlotPoints::from(self.gt.clone())).color(egui::Color32::DARK_GREEN));
-                plot_ui.line(Line::new("Dead Reckoning", PlotPoints::from(self.dr.clone())).color(egui::Color32::RED));
-                plot_ui.line(Line::new("EKF", PlotPoints::from(self.ekf.clone())).color(egui::Color32::BLUE));
+                plot_ui.line(
+                    Line::new("Ground Truth", PlotPoints::from(self.gt.clone()))
+                        .color(egui::Color32::DARK_GREEN),
+                );
+                plot_ui.line(
+                    Line::new("Dead Reckoning", PlotPoints::from(self.dr.clone()))
+                        .color(egui::Color32::RED),
+                );
+                plot_ui.line(
+                    Line::new("EKF", PlotPoints::from(self.ekf.clone())).color(egui::Color32::BLUE),
+                );
                 // Plot GPS as magenta points
                 let gps_points: PlotPoints = self.gps.iter().map(|[x, y]| [*x, *y]).collect();
                 plot_ui.points(
                     egui_plot::Points::new("GPS", gps_points)
                         .color(egui::Color32::YELLOW)
-                        .radius(2.5)
+                        .radius(2.5),
                 );
             });
         });
